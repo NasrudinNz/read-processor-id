@@ -1,0 +1,42 @@
+uses
+WbemScripting_TLB, ActiveX;
+
+function GetWMIstring (wmiHost, wmiClass, wmiProperty : string):string;
+var  // These are all needed for the WMI querying process
+  Locator:  ISWbemLocator;
+  Services: ISWbemServices;
+  SObject:  ISWbemObject;
+  ObjSet:   ISWbemObjectSet;
+  SProp:    ISWbemProperty;
+  Enum:     IEnumVariant;
+  Value:    Cardinal;
+  TempObj:  OleVariant;
+  SN: string;
+begin
+  try
+  Locator := CoSWbemLocator.Create;  // Create the Location object
+  // Connect to the WMI service, with the root\cimv2 namespace
+   Services :=  Locator.ConnectServer(wmiHost, 'root\cimv2', '', '', '','', 0, nil);
+  ObjSet := Services.ExecQuery('SELECT * FROM Win32_Processor', 'WQL',
+    wbemFlagReturnImmediately and wbemFlagForwardOnly , nil);
+  Enum :=  (ObjSet._NewEnum) as IEnumVariant;
+  while (Enum.Next(1, TempObj, Value) = S_OK) do
+  begin
+    SObject := IUnknown(tempObj) as ISWBemObject;
+    SProp := SObject.Properties_.Item(wmiProperty, 0);
+    if VarIsNull(SProp.Get_Value) then
+      result := ''
+    else
+    begin
+      SN := SProp.Get_Value;
+      result :=  SN;
+    end;
+  end;
+  except // Trap any exceptions (Not having WMI installed will cause one!)
+   on exception do
+    result := '';
+   end;
+end;
+
+//how to use
+edit1.text := GetWMIstring('','Win32_DiskDrive','ProcessorID')
